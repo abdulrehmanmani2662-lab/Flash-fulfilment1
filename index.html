@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Attendance</title>
+    <style>
+        /* --- PRO BOMB DESIGN (Dark Mode) --- */
+        body { 
+            background-color: #0c0c0c; 
+            color: white; 
+            font-family: sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            margin: 0;
+        }
+        
+        h1 { 
+            color: #ff3333; 
+            text-shadow: 0px 0px 15px #ff3333; 
+            border-bottom: 2px solid #ff3333; 
+            padding-bottom: 10px; 
+            font-size: 40px;
+            font-weight: 900;
+        }
+        
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+        }
+
+        /* Input Boxes */
+        input { 
+            width: 90%; 
+            padding: 15px; 
+            margin: 10px 0 20px 0; 
+            border-radius: 10px; 
+            border: 2px solid #ff4d4d; 
+            background: #1a1a1a; 
+            color: white; 
+            font-size: 20px; 
+            box-sizing: border-box;
+        }
+
+        /* Time Input Icon Color Fix */
+        input[type="time"]::-webkit-calendar-picker-indicator { 
+            filter: invert(1); /* Ghari ka icon white karne ke liye */
+            cursor: pointer; 
+        }
+        
+        .label {
+            color: #ffcccc; 
+            text-align: left; 
+            margin-left: 5%;
+            font-size: 18px;
+            font-weight: bold;
+            display: block;
+        }
+
+        /* Save OT Button - Red Background, Yellow Text */
+        button { 
+            background: linear-gradient(45deg, #ff3b3b, #cc0000); 
+            color: #fff200; 
+            width: 90%; 
+            padding: 15px; 
+            font-size: 26px; 
+            font-weight: 900; 
+            border-radius: 12px; 
+            border: 2px solid #ffaaaa; 
+            box-shadow: 0px 0px 15px #ff0000; 
+            cursor: pointer; 
+            margin-top: 10px; 
+            transition: 0.3s;
+        }
+        
+        button:hover { 
+            box-shadow: 0px 0px 25px #ff0000; 
+            transform: scale(1.05); 
+        }
+
+        /* Table Design */
+        table { 
+            width: 90%; 
+            margin: 30px auto; 
+            border-collapse: collapse; 
+            background: #1a1a1a; 
+        }
+        th, td { 
+            padding: 12px; 
+            border: 1px solid #ff4d4d; 
+            text-align: center; 
+        }
+        th { 
+            background-color: #ff3333; 
+            color: white; 
+        }
+
+        /* TOTAL OT Box */
+        .total-ot-box { 
+            background: linear-gradient(90deg, #ff1a1a, #990000); 
+            color: white; 
+            font-size: 30px; 
+            font-weight: 900; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin: 20px auto; 
+            width: 85%;
+            box-shadow: 0px 0px 20px #ff1a1a; 
+            border: 2px solid #ff4d4d; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🕐 Attendance</h1>
+        
+        <span class="label">Apna Naam Likhein:</span>
+        <input type="text" id="name" placeholder="Naam likhein...">
+        
+        <span class="label">⌚ Chutti ka Time:</span>
+        <input type="time" id="time">
+        
+        <button onclick="saveOT()">Save Ot</button>
+
+        <table id="recordTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Name</th>
+                    <th>Time</th>
+                    <th>OT</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                </tbody>
+        </table>
+
+        <div class="total-ot-box" id="totalOTBox">TOTAL OT: 0.0</div>
+    </div>
+
+    <script>
+        // Browser ki memory se data nikalna
+        let records = JSON.parse(localStorage.getItem("attendance_data")) || [];
+
+        function displayRecords() {
+            let tbody = document.getElementById("tableBody");
+            tbody.innerHTML = "";
+            let totalOT = 0;
+
+            records.forEach(record => {
+                totalOT += parseFloat(record.ot);
+                tbody.innerHTML += `<tr>
+                    <td>${record.date}</td>
+                    <td>${record.name}</td>
+                    <td>${record.time}</td>
+                    <td>${record.ot}</td>
+                </tr>`;
+            });
+
+            document.getElementById("totalOTBox").innerHTML = `TOTAL OT: ${totalOT.toFixed(2)}`;
+        }
+
+        function saveOT() {
+            let name = document.getElementById("name").value;
+            let time = document.getElementById("time").value;
+
+            if (name.trim() === "" || time === "") {
+                alert("⚠️ Pehle naam aur time lazmi likhein!");
+                return;
+            }
+
+            // Time calculate karna
+            let timeParts = time.split(":");
+            let hour = parseInt(timeParts[0]);
+            let minute = parseInt(timeParts[1]);
+
+            let dutyEndHour = 18; // 6 PM
+            let ot = 0.0;
+
+            if (hour >= dutyEndHour) {
+                ot = (hour - dutyEndHour) + (minute / 60);
+            }
+
+            // Time ko 12-hour format (AM/PM) mein badalna
+            let ampm = hour >= 12 ? 'PM' : 'AM';
+            let displayHour = hour % 12;
+            displayHour = displayHour ? displayHour : 12; 
+            let displayTime = displayHour + ":" + (minute < 10 ? '0' + minute : minute) + " " + ampm;
+
+            let date = new Date().toISOString().split('T')[0];
+
+            // Naya record tayar karna
+            let newRecord = { date: date, name: name, time: displayTime, ot: ot.toFixed(2) };
+            
+            // Record array mein daal kar save karna
+            records.push(newRecord);
+            localStorage.setItem("attendance_data", JSON.stringify(records));
+
+            displayRecords();
+            alert("✅ Record Saved!");
+            
+            // Inputs khali kar dena
+            document.getElementById("name").value = "";
+            document.getElementById("time").value = "";
+        }
+
+        // Page load hone par purana data dikhana
+        displayRecords();
+    </script>
+
+</body>
+</html>
