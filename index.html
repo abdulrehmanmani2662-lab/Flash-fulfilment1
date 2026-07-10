@@ -2,14 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Flash Attendance</title>
     <style>
-        body { background: #0c0c0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        body { background: #0c0c0c; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
         .container { max-width: 400px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 20px; }
-        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 2px solid #ff4d4d; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
-        .save-btn { background: #ff3333; color: white; width: 100%; padding: 15px; font-weight: bold; border-radius: 12px; border: none; cursor: pointer; }
-        .csv-btn { background: #008800; color: white; width: 100%; padding: 12px; margin-top: 10px; border-radius: 12px; border: none; }
+        h1 { color: #ff3333; font-size: 24px; margin-bottom: 10px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 2px solid #333; background: #222; color: #fff; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        .save-btn { background: #ff3333; color: white; }
+        .csv-btn { background: #008800; color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+        th { background: #333; color: #ff3333; padding: 8px; }
+        td { padding: 8px; border-bottom: 1px solid #444; }
     </style>
 </head>
 <body>
@@ -18,15 +23,15 @@
         
         <div id="userSetup">
             <input type="text" id="userName" placeholder="Apna Naam Likhein...">
-            <button class="save-btn" onclick="setUser()">START APP</button>
+            <button class="btn save-btn" onclick="setUser()">START APP</button>
         </div>
 
         <div id="mainApp" style="display:none;">
-            <h2 id="welcomeText" style="font-size: 18px;"></h2>
+            <h2 id="welcomeText" style="font-size: 16px;"></h2>
             <input type="time" id="time">
-            <button class="save-btn" onclick="saveOT()">Save Ot</button>
-            <button class="csv-btn" onclick="downloadMyCSV()">📥 Download CSV</button>
-            <table id="recordTable" style="width:100%; color:white; margin-top:20px; border-collapse: collapse;">
+            <button class="btn save-btn" onclick="saveOT()">Save Ot</button>
+            <button class="btn csv-btn" onclick="downloadMyCSV()">📥 Download CSV</button>
+            <table id="recordTable">
                 <thead><tr><th>Date</th><th>Time</th><th>OT</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
@@ -55,8 +60,10 @@
         async function saveOT() {
             let name = localStorage.getItem("my_name");
             let time = document.getElementById("time").value;
+            if(!time) return alert("Time select karo!");
             let date = new Date().toISOString().split('T')[0];
             let ot = (parseInt(time.split(":")[0]) >= 18) ? (parseInt(time.split(":")[0]) - 18) : 0;
+            
             await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({date, name, time, ot: ot.toFixed(2)}) });
             alert("✅ Saved!");
             location.reload();
@@ -68,7 +75,10 @@
             myData = await res.json();
             let tbody = document.getElementById("tableBody");
             myData.forEach((row, i) => {
-                if(i > 0) tbody.innerHTML += `<tr><td>${row[0]}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`;
+                if(i > 0) {
+                    let cleanDate = row[0].toString().split('T')[0];
+                    tbody.innerHTML += `<tr><td>${cleanDate}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`;
+                }
             });
         }
 
