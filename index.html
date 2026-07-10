@@ -44,7 +44,7 @@
 
         /* Time Input Icon Color Fix */
         input[type="time"]::-webkit-calendar-picker-indicator { 
-            filter: invert(1); /* Ghari ka icon white karne ke liye */
+            filter: invert(1); 
             cursor: pointer; 
         }
         
@@ -57,8 +57,8 @@
             display: block;
         }
 
-        /* Save OT Button - Red Background, Yellow Text */
-        button { 
+        /* Save OT Button */
+        .save-btn { 
             background: linear-gradient(45deg, #ff3b3b, #cc0000); 
             color: #fff200; 
             width: 90%; 
@@ -72,16 +72,36 @@
             margin-top: 10px; 
             transition: 0.3s;
         }
-        
-        button:hover { 
+        .save-btn:hover { 
             box-shadow: 0px 0px 25px #ff0000; 
             transform: scale(1.05); 
+        }
+
+        /* Download CSV Button */
+        .download-btn {
+            background: #1a1a1a;
+            color: #00ff00;
+            width: 90%;
+            padding: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+            box-shadow: 0px 0px 10px #00ff00;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.3s;
+        }
+        .download-btn:hover {
+            background: #00ff00;
+            color: black;
+            box-shadow: 0px 0px 20px #00ff00;
         }
 
         /* Table Design */
         table { 
             width: 90%; 
-            margin: 30px auto; 
+            margin: 30px auto 10px auto; 
             border-collapse: collapse; 
             background: #1a1a1a; 
         }
@@ -121,7 +141,7 @@
         <span class="label">⌚ Chutti ka Time:</span>
         <input type="time" id="time">
         
-        <button onclick="saveOT()">Save Ot</button>
+        <button class="save-btn" onclick="saveOT()">Save Ot</button>
 
         <table id="recordTable">
             <thead>
@@ -137,10 +157,11 @@
         </table>
 
         <div class="total-ot-box" id="totalOTBox">TOTAL OT: 0.0</div>
+
+        <button class="download-btn" onclick="downloadCSV()">📥 Download CSV Record</button>
     </div>
 
     <script>
-        // Browser ki memory se data nikalna
         let records = JSON.parse(localStorage.getItem("attendance_data")) || [];
 
         function displayRecords() {
@@ -170,7 +191,6 @@
                 return;
             }
 
-            // Time calculate karna
             let timeParts = time.split(":");
             let hour = parseInt(timeParts[0]);
             let minute = parseInt(timeParts[1]);
@@ -182,7 +202,6 @@
                 ot = (hour - dutyEndHour) + (minute / 60);
             }
 
-            // Time ko 12-hour format (AM/PM) mein badalna
             let ampm = hour >= 12 ? 'PM' : 'AM';
             let displayHour = hour % 12;
             displayHour = displayHour ? displayHour : 12; 
@@ -190,22 +209,47 @@
 
             let date = new Date().toISOString().split('T')[0];
 
-            // Naya record tayar karna
             let newRecord = { date: date, name: name, time: displayTime, ot: ot.toFixed(2) };
             
-            // Record array mein daal kar save karna
             records.push(newRecord);
             localStorage.setItem("attendance_data", JSON.stringify(records));
 
             displayRecords();
             alert("✅ Record Saved!");
             
-            // Inputs khali kar dena
             document.getElementById("name").value = "";
             document.getElementById("time").value = "";
         }
 
-        // Page load hone par purana data dikhana
+        // CSV Download Karne ka Function
+        function downloadCSV() {
+            if (records.length === 0) {
+                alert("⚠️ Abhi tak koi record save nahi hua hai!");
+                return;
+            }
+
+            // CSV ki pehli line (Headers)
+            let csvContent = "Date,Name,Time,OT\n";
+
+            // Har record ko CSV line mein badalna
+            records.forEach(record => {
+                csvContent += `${record.date},${record.name},${record.time},${record.ot}\n`;
+            });
+
+            // File banakar download karna
+            let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement("a");
+            let url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", "Attendance_Record.csv");
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         displayRecords();
     </script>
 
