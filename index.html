@@ -9,14 +9,14 @@
         .container { max-width: 400px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 20px; }
         h1 { color: #ff3333; font-size: 24px; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; }
-        .checkbox-container { display: flex; align-items: center; gap: 10px; color: #ffcc00; margin: 10px 0; }
+        .checkbox-container { display: flex; align-items: center; gap: 10px; color: #ffcc00; margin: 10px 0; font-size: 14px; }
         .btn { width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
         .save-btn { background: #ff3333; color: white; }
         .csv-btn { background: #008800; color: white; }
         .total-box { background: #333; color: #ffcc00; padding: 15px; border-radius: 10px; margin: 20px 0; font-size: 18px; font-weight: bold; }
         .table-container { background: #222; padding: 10px; border-radius: 15px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { padding: 8px 2px; border-bottom: 1px solid #444; border-right: 1px solid #444; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+        th, td { padding: 8px 2px; border-bottom: 1px solid #444; border-right: 1px solid #444; color: #fff; }
         th:last-child, td:last-child { border-right: none; }
     </style>
 </head>
@@ -36,7 +36,7 @@
     </div>
 
     <script>
-        const scriptURL = "https://script.google.com/macros/s/AKfycbybqkBacKM6rcExcHY9PK7I_c4CmTx5NcLfQAi_HLJx0QIv3TTDTyC5RjHRZlX5--6G/exec";
+        const scriptURL = "https://script.google.com/macros/s/AKfycbxdrsiAuL-nSTG_4-Pac9Aa5DcBZavzpEBwOYxXUzP6WjcpaV2C6hHNJQv9GSwLYcXD/exec";
         let myData = [];
         let isEditing = false;
 
@@ -56,12 +56,13 @@
             myData.forEach((row, i) => {
                 if(i > 0) {
                     let d = row[0].toString().split('T')[0];
-                    tbody.innerHTML += `<tr><td>${d}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`;
+                    let t = row[2].toString().length > 5 ? row[2].toString().substring(11, 16) : row[2];
+                    tbody.innerHTML += `<tr><td>${d}</td><td>${t}</td><td>${row[3]}</td></tr>`;
                     total += parseFloat(row[3]);
                     if(d == today) {
                         isEditing = true;
                         document.getElementById("actionBtn").innerText = "Update Today's OT";
-                        document.getElementById("time").value = row[2];
+                        document.getElementById("time").value = t;
                     }
                 }
             });
@@ -72,7 +73,6 @@
             let name = localStorage.getItem("my_name"), time = document.getElementById("time").value;
             if(!time) return alert("Time select karo!");
             
-            // Logic: Break hai toh 6 baje (6), nahi toh 5:30 (5.5)
             let startHour = document.getElementById("breakCheck").checked ? 6 : 5.5;
             let hour = parseInt(time.split(":")[0]) + (parseInt(time.split(":")[1])/60);
             let ot = hour > startHour ? (hour - startHour).toFixed(1) : 0;
