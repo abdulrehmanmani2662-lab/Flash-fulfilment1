@@ -2,21 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Attendance</title>
     <style>
-        /* Mobile-First Design */
-        body { background: #0c0c0c; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 10px; }
-        .container { max-width: 400px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 20px; box-shadow: 0 0 20px rgba(255,51,51,0.2); }
-        h1 { color: #ff3333; font-size: 28px; margin-bottom: 20px; }
-        
-        select, input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 2px solid #333; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
-        .save-btn { background: #ff3333; color: white; width: 100%; padding: 15px; font-weight: bold; font-size: 18px; border-radius: 12px; border: none; cursor: pointer; margin-top: 10px; }
-        .view-btn { background: transparent; color: #00ff00; border: 2px solid #00ff00; padding: 12px; width: 100%; margin-top: 15px; border-radius: 12px; }
-        
-        table { width: 100%; margin-top: 20px; border-collapse: collapse; color: white; font-size: 14px; }
-        th, td { padding: 8px; border: 1px solid #444; }
-        th { background: #333; color: #ff3333; }
+        body { background: #0c0c0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .container { max-width: 400px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 20px; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 2px solid #ff4d4d; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
+        .save-btn { background: #ff3333; color: white; width: 100%; padding: 15px; font-weight: bold; border-radius: 12px; border: none; cursor: pointer; }
+        .csv-btn { background: #008800; color: white; width: 100%; padding: 12px; margin-top: 10px; border-radius: 12px; border: none; }
     </style>
 </head>
 <body>
@@ -24,21 +17,16 @@
         <h1>🕐 Attendance</h1>
         
         <div id="userSetup">
-            <select id="userName">
-                <option value="">Apna Naam Select Karein</option>
-                <option value="Muzamil">Muzamil</option>
-                <option value="Tiger">Tiger</option>
-                <option value="Zain">Zain</option>
-            </select>
-            <button class="save-btn" onclick="setUser()">SET USER</button>
+            <input type="text" id="userName" placeholder="Apna Naam Likhein...">
+            <button class="save-btn" onclick="setUser()">START APP</button>
         </div>
 
         <div id="mainApp" style="display:none;">
             <h2 id="welcomeText" style="font-size: 18px;"></h2>
             <input type="time" id="time">
             <button class="save-btn" onclick="saveOT()">Save Ot</button>
-            <button class="view-btn" onclick="loadMyData()">🔍 Apna Record Dekho</button>
-            <table id="recordTable">
+            <button class="csv-btn" onclick="downloadMyCSV()">📥 Download CSV</button>
+            <table id="recordTable" style="width:100%; color:white; margin-top:20px; border-collapse: collapse;">
                 <thead><tr><th>Date</th><th>Time</th><th>OT</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
@@ -47,18 +35,17 @@
 
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbybqkBacKM6rcExcHY9PK7I_c4CmTx5NcLfQAi_HLJx0QIv3TTDTyC5RjHRZlX5--6G/exec";
-
-        let currentUser = localStorage.getItem("my_name");
-        if(currentUser) { showApp(currentUser); }
+        let myData = [];
 
         function setUser() {
             let name = document.getElementById("userName").value;
-            if(!name) return alert("Pehle naam select karo!");
+            if(!name) return alert("Naam likho!");
             localStorage.setItem("my_name", name);
-            showApp(name);
+            location.reload();
         }
 
-        function showApp(name) {
+        let name = localStorage.getItem("my_name");
+        if(name) {
             document.getElementById("userSetup").style.display = "none";
             document.getElementById("mainApp").style.display = "block";
             document.getElementById("welcomeText").innerText = "Welcome, " + name;
@@ -70,8 +57,6 @@
             let time = document.getElementById("time").value;
             let date = new Date().toISOString().split('T')[0];
             let ot = (parseInt(time.split(":")[0]) >= 18) ? (parseInt(time.split(":")[0]) - 18) : 0;
-
-            if(!time) return alert("Time select karo!");
             await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({date, name, time, ot: ot.toFixed(2)}) });
             alert("✅ Saved!");
             location.reload();
@@ -80,12 +65,20 @@
         async function loadMyData() {
             let name = localStorage.getItem("my_name");
             let res = await fetch(scriptURL + "?name=" + name);
-            let data = await res.json();
+            myData = await res.json();
             let tbody = document.getElementById("tableBody");
-            tbody.innerHTML = "";
-            data.forEach((row, i) => {
+            myData.forEach((row, i) => {
                 if(i > 0) tbody.innerHTML += `<tr><td>${row[0]}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`;
             });
+        }
+
+        function downloadMyCSV() {
+            let csv = "Date,Time,OT\n";
+            myData.forEach((r, i) => { if(i>0) csv += `${r[0]},${r[2]},${r[3]}\n`; });
+            let blob = new Blob([csv], { type: 'text/csv' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url; a.download = "My_Attendance.csv"; a.click();
         }
     </script>
 </body>
