@@ -2,19 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Attendance</title>
     <style>
-        body { background: #0c0c0c; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        body { background: #0c0c0c; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; }
         .container { max-width: 400px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 20px; }
-        h1 { color: #ff3333; font-size: 24px; margin-bottom: 10px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 2px solid #333; background: #222; color: #fff; box-sizing: border-box; }
+        h1 { color: #ff3333; font-size: 24px; margin-bottom: 20px; }
+        
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; }
         .btn { width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
         .save-btn { background: #ff3333; color: white; }
         .csv-btn { background: #008800; color: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-        th { background: #333; color: #ff3333; padding: 8px; }
-        td { padding: 8px; border-bottom: 1px solid #444; }
+
+        /* Total OT Box */
+        .total-box { background: #333; color: #ffcc00; padding: 15px; border-radius: 10px; margin: 20px 0; font-size: 20px; font-weight: bold; border: 1px solid #ffcc00; }
+
+        /* Clean Table Layout */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; table-layout: fixed; }
+        th { background: #222; color: #ff3333; padding: 10px 2px; border-bottom: 2px solid #444; }
+        td { padding: 8px 2px; border-bottom: 1px solid #333; word-wrap: break-word; }
     </style>
 </head>
 <body>
@@ -22,16 +28,19 @@
         <h1>🕐 Attendance</h1>
         
         <div id="userSetup">
-            <input type="text" id="userName" placeholder="Apna Naam Likhein...">
+            <input type="text" id="userName" placeholder="Apna Naam...">
             <button class="btn save-btn" onclick="setUser()">START APP</button>
         </div>
 
         <div id="mainApp" style="display:none;">
-            <h2 id="welcomeText" style="font-size: 16px;"></h2>
+            <h2 id="welcomeText" style="font-size: 16px;">Welcome!</h2>
             <input type="time" id="time">
             <button class="btn save-btn" onclick="saveOT()">Save Ot</button>
             <button class="btn csv-btn" onclick="downloadMyCSV()">📥 Download CSV</button>
-            <table id="recordTable">
+            
+            <div class="total-box" id="totalOT">Total OT: 0</div>
+            
+            <table>
                 <thead><tr><th>Date</th><th>Time</th><th>OT</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
@@ -53,7 +62,7 @@
         if(name) {
             document.getElementById("userSetup").style.display = "none";
             document.getElementById("mainApp").style.display = "block";
-            document.getElementById("welcomeText").innerText = "Welcome, " + name;
+            document.getElementById("welcomeText").innerText = "User: " + name;
             loadMyData();
         }
 
@@ -64,7 +73,7 @@
             let date = new Date().toISOString().split('T')[0];
             let ot = (parseInt(time.split(":")[0]) >= 18) ? (parseInt(time.split(":")[0]) - 18) : 0;
             
-            await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({date, name, time, ot: ot.toFixed(2)}) });
+            await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({date, name, time, ot: ot.toFixed(0)}) });
             alert("✅ Saved!");
             location.reload();
         }
@@ -74,12 +83,16 @@
             let res = await fetch(scriptURL + "?name=" + name);
             myData = await res.json();
             let tbody = document.getElementById("tableBody");
+            let total = 0;
             myData.forEach((row, i) => {
                 if(i > 0) {
-                    let cleanDate = row[0].toString().split('T')[0];
-                    tbody.innerHTML += `<tr><td>${cleanDate}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`;
+                    let date = row[0].toString().split('T')[0];
+                    let time = row[2];
+                    tbody.innerHTML += `<tr><td>${date}</td><td>${time}</td><td>${row[3]}</td></tr>`;
+                    total += parseFloat(row[3]);
                 }
             });
+            document.getElementById("totalOT").innerText = "Total OT: " + total;
         }
 
         function downloadMyCSV() {
@@ -88,7 +101,7 @@
             let blob = new Blob([csv], { type: 'text/csv' });
             let url = URL.createObjectURL(blob);
             let a = document.createElement("a");
-            a.href = url; a.download = "My_Attendance.csv"; a.click();
+            a.href = url; a.download = "Attendance.csv"; a.click();
         }
     </script>
 </body>
