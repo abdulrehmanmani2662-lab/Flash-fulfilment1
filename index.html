@@ -4,111 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Attendance PRO</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* --- PRO BOMB DESIGN WITH GLOW --- */
         body { background-color: #0c0c0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
-        
-        /* Heading & Spin Clock */
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .spin-clock { display: inline-block; animation: spin 3s linear infinite; font-size: 45px; vertical-align: middle; }
-        h1 { color: #ff3333; text-shadow: 0px 0px 15px #ff3333; border-bottom: 2px solid #ff3333; padding-bottom: 10px; font-size: 45px; font-weight: 900; }
-        
+        h1 { color: #ff3333; text-shadow: 0px 0px 15px #ff3333; border-bottom: 2px solid #ff3333; padding-bottom: 10px; font-size: 40px; font-weight: 900; }
         .container { max-width: 500px; margin: auto; }
-        input { width: 90%; padding: 15px; margin: 10px 0 20px 0; border-radius: 10px; border: 2px solid #ff4d4d; background: #1a1a1a; color: white; font-size: 20px; box-sizing: border-box; }
-        .label { color: #ffcccc; text-align: left; margin-left: 5%; font-size: 18px; font-weight: bold; }
-        
-        /* Glowing Buttons */
-        .save-btn { background: linear-gradient(45deg, #ff3b3b, #cc0000); color: #fff200; width: 90%; padding: 15px; font-size: 26px; font-weight: 900; border-radius: 12px; border: 2px solid #ffaaaa; box-shadow: 0px 0px 15px #ff0000; cursor: pointer; transition: 0.3s; }
-        .save-btn:hover { box-shadow: 0px 0px 25px #ff0000; transform: scale(1.05); }
-        .view-btn { background: #1a1a1a; color: #00bfff; width: 90%; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 10px; border: 2px solid #00bfff; cursor: pointer; margin-top: 15px; }
-        .download-btn { background: #1a1a1a; color: #00ff00; width: 90%; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 10px; border: 2px solid #00ff00; cursor: pointer; margin-top: 20px; display: none; }
-        
-        /* Table & Result */
-        table { width: 90%; margin: 30px auto; border-collapse: collapse; background: #1a1a1a; display: none; }
-        th, td { padding: 12px; border: 1px solid #ff4d4d; text-align: center; }
-        th { background-color: #ff3333; color: white; }
-        .total-ot-box { background: linear-gradient(90deg, #ff1a1a, #990000); color: white; font-size: 32px; font-weight: 900; padding: 20px; border-radius: 15px; margin: 20px auto; width: 85%; box-shadow: 0px 0px 20px #ff1a1a; display: none; }
+        input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 2px solid #ff4d4d; background: #1a1a1a; color: white; font-size: 20px; box-sizing: border-box; }
+        .save-btn { background: linear-gradient(45deg, #ff3b3b, #cc0000); color: #fff200; width: 90%; padding: 15px; font-size: 26px; font-weight: 900; border-radius: 12px; border: 2px solid #ffaaaa; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1><span class="spin-clock">🕐</span> Attendance</h1>
-        
-        <span class="label">Apna Naam Likhein:</span>
-        <input type="text" id="name" placeholder="Name...">
-        <span class="label">📅 Date:</span>
+        <h1>🕐 Attendance</h1>
+        <input type="text" id="name" placeholder="Apna Naam...">
         <input type="date" id="attendanceDate">
-        <span class="label">⌚ Time:</span>
         <input type="time" id="time">
-        
-        <button class="save-btn" onclick="saveOT()">Save Ot</button>
-        <button class="view-btn" onclick="loadUserRecords()">🔍 Mera Record Dekho</button>
-
-        <table id="recordTable">
-            <thead><tr><th>Date</th><th>Name</th><th>Time</th><th>OT</th></tr></thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-
-        <div class="total-ot-box" id="totalOTBox">TOTAL OT: 0.0</div>
-        <button id="downloadBtn" class="download-btn" onclick="downloadCSV()">📥 Download CSV Record</button>
+        <button class="save-btn" onclick="saveData()">Save Record</button>
     </div>
 
     <script>
-        const SUPABASE_URL = "https://pgqsrhswmzifnijmtpsx.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBncXNyaHN3bXppZm5pam10cHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2Mjg3NDIsImV4cCI6MjA5OTIwNDc0Mn0.yk4g6vjQ8G24HXniXpCDWaQpwZjByEJq2y83vHVLHPA";
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
         document.getElementById('attendanceDate').valueAsDate = new Date();
-        let userRecords = [];
-
-        async function loadUserRecords() {
-            let name = document.getElementById("name").value.trim().toLowerCase();
-            if (name === "") { alert("⚠️ Pehle naam likhein!"); return; }
-
-            const { data, error } = await _supabase.from('attendance').select('*').ilike('name', name).order('date', { ascending: true });
-            if (error) { alert("Error: " + error.message); return; }
-
-            userRecords = data || [];
-            let tbody = document.getElementById("tableBody");
-            tbody.innerHTML = "";
-            let totalOT = 0;
-
-            if (userRecords.length > 0) {
-                document.getElementById("recordTable").style.display = "table";
-                document.getElementById("totalOTBox").style.display = "block";
-                document.getElementById("downloadBtn").style.display = "block";
-                userRecords.forEach(r => {
-                    totalOT += parseFloat(r.ot);
-                    tbody.innerHTML += `<tr><td>${r.date}</td><td>${r.name}</td><td>${r.time}</td><td>${r.ot}</td></tr>`;
-                });
-                document.getElementById("totalOTBox").innerHTML = `TOTAL OT: ${totalOT.toFixed(2)}`;
-            } else { alert("Koi record nahi mila."); }
-        }
-
-        async function saveOT() {
+        
+        async function saveData() {
             let name = document.getElementById("name").value.trim();
             let date = document.getElementById("attendanceDate").value;
             let time = document.getElementById("time").value;
             
+            if(name === "") { alert("⚠️ Naam likhein!"); return; }
+
             let t = time.split(":");
             let hour = parseInt(t[0]);
             let minute = parseInt(t[1]);
             let ot = hour >= 18 ? (hour - 18) + (minute / 60) : 0;
 
-            await _supabase.from('attendance').insert([{ date: date, name: name.toLowerCase(), time: time, ot: ot.toFixed(2) }]);
-            alert("✅ Record Saved!");
-            loadUserRecords();
-        }
+            const scriptURL = "https://script.google.com/macros/s/AKfycbzlagtlehkdtrk-_LYO6n74JIuZBezXabjka03BdLjqDGy7bwbsbHH2ZVtgN_xGSGGP/exec";
 
-        function downloadCSV() {
-            let csv = "Date,Name,Time,OT\n";
-            userRecords.forEach(r => csv += `${r.date},${r.name},${r.time},${r.ot}\n`);
-            let blob = new Blob([csv], { type: 'text/csv' });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            a.href = url; a.download = "Attendance.csv"; a.click();
+            try {
+                await fetch(scriptURL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({date: date, name: name, time: time, ot: ot.toFixed(2)})
+                });
+                alert("✅ Record Saved!");
+                document.getElementById("name").value = "";
+            } catch (error) {
+                alert("Error: " + error);
+            }
         }
     </script>
 </body>
