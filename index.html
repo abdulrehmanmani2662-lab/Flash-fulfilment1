@@ -8,48 +8,67 @@
         body { background-color: #0c0c0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
         h1 { color: #ff3333; text-shadow: 0px 0px 15px #ff3333; border-bottom: 2px solid #ff3333; padding-bottom: 10px; font-size: 40px; font-weight: 900; }
         .container { max-width: 500px; margin: auto; }
-        input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 2px solid #ff4d4d; background: #1a1a1a; color: white; font-size: 20px; box-sizing: border-box; }
-        .save-btn { background: linear-gradient(45deg, #ff3b3b, #cc0000); color: #fff200; width: 90%; padding: 15px; font-size: 26px; font-weight: 900; border-radius: 12px; border: 2px solid #ffaaaa; cursor: pointer; margin-top: 20px; }
+        input { width: 90%; padding: 15px; margin: 10px 0 20px 0; border-radius: 10px; border: 2px solid #ff4d4d; background: #1a1a1a; color: white; font-size: 20px; box-sizing: border-box; }
+        .label { color: #ffcccc; text-align: left; margin-left: 5%; font-size: 18px; font-weight: bold; }
+        .save-btn { background: linear-gradient(45deg, #ff3b3b, #cc0000); color: #fff200; width: 90%; padding: 15px; font-size: 26px; font-weight: 900; border-radius: 12px; border: 2px solid #ffaaaa; box-shadow: 0px 0px 15px #ff0000; cursor: pointer; }
+        .download-btn { background: #1a1a1a; color: #00ff00; width: 90%; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 10px; border: 2px solid #00ff00; cursor: pointer; margin-top: 20px; }
+        table { width: 90%; margin: 30px auto; border-collapse: collapse; background: #1a1a1a; }
+        th, td { padding: 12px; border: 1px solid #ff4d4d; text-align: center; }
+        th { background-color: #ff3333; color: white; }
+        .total-ot-box { background: linear-gradient(90deg, #ff1a1a, #990000); color: white; font-size: 30px; font-weight: 900; padding: 15px; border-radius: 10px; margin: 20px auto; width: 85%; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>🕐 Attendance</h1>
-        <input type="text" id="name" placeholder="Apna Naam...">
-        <input type="date" id="attendanceDate">
+        <span class="label">Apna Naam Likhein:</span>
+        <input type="text" id="name" placeholder="Name...">
+        <span class="label">⌚ Chutti ka Time:</span>
         <input type="time" id="time">
-        <button class="save-btn" onclick="saveData()">Save Record</button>
+        
+        <button class="save-btn" onclick="saveOT()">Save Ot</button>
+
+        <table id="recordTable">
+            <thead><tr><th>Date</th><th>Name</th><th>Time</th><th>OT</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+
+        <div class="total-ot-box" id="totalOTBox">TOTAL OT: 0.0</div>
+        <button class="download-btn" onclick="window.print()">🖨️ Print/Save PDF</button>
     </div>
 
     <script>
-        document.getElementById('attendanceDate').valueAsDate = new Date();
-        
-        async function saveData() {
+        const scriptURL = "https://script.google.com/macros/s/AKfycbzlagtlehkdtrk-_LYO6n74JIuZBezXabjka03BdLjqDGy7bwbsbHH2ZVtgN_xGSGGP/exec";
+
+        async function saveOT() {
             let name = document.getElementById("name").value.trim();
-            let date = document.getElementById("attendanceDate").value;
             let time = document.getElementById("time").value;
+            let date = new Date().toISOString().split('T')[0];
             
-            if(name === "") { alert("⚠️ Naam likhein!"); return; }
+            if(name === "" || time === "") { alert("⚠️ Naam aur Time likhein!"); return; }
 
             let t = time.split(":");
             let hour = parseInt(t[0]);
             let minute = parseInt(t[1]);
             let ot = hour >= 18 ? (hour - 18) + (minute / 60) : 0;
 
-            const scriptURL = "https://script.google.com/macros/s/AKfycbzlagtlehkdtrk-_LYO6n74JIuZBezXabjka03BdLjqDGy7bwbsbHH2ZVtgN_xGSGGP/exec";
+            // Sheet mein bhejne ka logic
+            await fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({date: date, name: name, time: time, ot: ot.toFixed(2)})
+            });
 
-            try {
-                await fetch(scriptURL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({date: date, name: name, time: time, ot: ot.toFixed(2)})
-                });
-                alert("✅ Record Saved!");
-                document.getElementById("name").value = "";
-            } catch (error) {
-                alert("Error: " + error);
-            }
+            // UI update (Table mein dikhane ke liye)
+            let tbody = document.getElementById("tableBody");
+            tbody.innerHTML += `<tr><td>${date}</td><td>${name}</td><td>${time}</td><td>${ot.toFixed(2)}</td></tr>`;
+            
+            let totalBox = document.getElementById("totalOTBox");
+            let currentTotal = parseFloat(totalBox.innerText.replace("TOTAL OT: ", ""));
+            totalBox.innerHTML = `TOTAL OT: ${(currentTotal + ot).toFixed(2)}`;
+
+            alert("✅ Record Saved to Sheet!");
         }
     </script>
 </body>
