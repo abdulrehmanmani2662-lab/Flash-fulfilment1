@@ -2,28 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Attendance PRO</title>
     <style>
-        body { background-color: #0c0c0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
-        h1 { color: #ff3333; text-shadow: 0px 0px 15px #ff3333; border-bottom: 2px solid #ff3333; padding-bottom: 10px; font-size: 40px; font-weight: 900; }
-        .container { max-width: 500px; margin: auto; }
-        input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 2px solid #ff4d4d; background: #1a1a1a; color: white; font-size: 20px; box-sizing: border-box; }
-        .save-btn { background: linear-gradient(45deg, #ff3333, #880000); color: #fff200; width: 90%; padding: 15px; font-size: 22px; font-weight: 900; border-radius: 12px; border: 2px solid #ffaaaa; cursor: pointer; margin-top: 10px; }
-        .csv-btn { background: #1a1a1a; color: #00ff00; width: 90%; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 10px; border: 2px solid #00ff00; cursor: pointer; margin-top: 20px; }
+        body { background: #0c0c0c; color: white; font-family: sans-serif; text-align: center; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 15px; }
+        select, input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 2px solid #ff4d4d; background: #222; color: white; font-size: 18px; }
+        .save-btn { background: #ff3333; color: white; width: 90%; padding: 15px; font-weight: 900; border-radius: 10px; cursor: pointer; }
+        .view-btn { background: #222; color: #00ff00; border: 1px solid #00ff00; padding: 12px; width: 90%; margin-top: 10px; border-radius: 10px; cursor: pointer; }
         .total-ot-box { background: #990000; font-size: 25px; font-weight: 900; padding: 15px; margin: 20px auto; width: 85%; border-radius: 10px; border: 2px solid #ff4d4d; }
-        table { width: 90%; margin: 20px auto; border-collapse: collapse; background: #1a1a1a; color: white; }
+        table { width: 90%; margin: 20px auto; border-collapse: collapse; color: white; }
         th, td { padding: 10px; border: 1px solid #ff4d4d; }
         th { background: #ff3333; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <h1>🕐 Attendance</h1>
-        <input type="text" id="name" placeholder="Apna Naam...">
+        <select id="name">
+            <option value="">Apna Naam Select Karein</option>
+            <option value="Muzamil">Muzamil</option>
+            <option value="Tiger">Tiger</option>
+            <option value="Zain">Zain</option>
+        </select>
         <input type="time" id="time">
         <button class="save-btn" onclick="saveOT()">Save Ot</button>
+        <button class="view-btn" onclick="loadData()">🔍 Apna Record Dekho</button>
         
         <div class="total-ot-box" id="totalOTBox">TOTAL OT: 0.0</div>
         
@@ -31,59 +34,41 @@
             <thead><tr><th>Date</th><th>Name</th><th>Time</th><th>OT</th></tr></thead>
             <tbody id="tableBody"></tbody>
         </table>
-        
-        <button class="csv-btn" onclick="downloadCSV()">📥 Download CSV</button>
     </div>
 
     <script>
-        // Yahan apna wahi URL hai jo aapne nikala tha
-        const scriptURL = "https://script.google.com/macros/s/AKfycbxbWRm3c87ijFnkdLaZOuKB_OH4tETUx5mOqd8IDHz-Qj9AJ5M7gZAuIA-YrpsWTODU/exec";
-        let fullData = [];
+        const scriptURL = "https://script.google.com/macros/s/AKfycbybqkBacKM6rcExcHY9PK7I_c4CmTx5NcLfQAi_HLJx0QIv3TTDTyC5RjHRZlX5--6G/exec";
 
         async function saveOT() {
-            let name = document.getElementById("name").value.trim();
+            let name = document.getElementById("name").value;
             let time = document.getElementById("time").value;
             let date = new Date().toISOString().split('T')[0];
             let ot = (parseInt(time.split(":")[0]) >= 18) ? (parseInt(time.split(":")[0]) - 18) : 0;
 
-            if(!name || !time) { alert("⚠️ Naam aur Time likhein!"); return; }
+            if(!name || !time) { alert("⚠️ Naam aur Time select karein!"); return; }
 
-            // Sheet mein data bhejo
-            await fetch(scriptURL, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify({date, name, time, ot: ot.toFixed(2)}) 
-            });
-            
+            await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({date, name, time, ot: ot.toFixed(2)}) });
             alert("✅ Saved!");
-            location.reload(); // Refresh taake naya data load ho
         }
 
         async function loadData() {
-            let res = await fetch(scriptURL);
+            let name = document.getElementById("name").value;
+            if(!name) { alert("Pehle apna naam select karo!"); return; }
+            
+            let res = await fetch(scriptURL + "?name=" + name);
             let data = await res.json();
-            fullData = data; 
             let tbody = document.getElementById("tableBody");
             let total = 0;
+            tbody.innerHTML = "";
+            
             data.forEach((row, i) => {
-                if(i > 0) { // Pehli row headings ki hoti hai
+                if(i > 0) {
                     tbody.innerHTML += `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`;
                     total += parseFloat(row[3]);
                 }
             });
             document.getElementById("totalOTBox").innerText = "TOTAL OT: " + total.toFixed(2);
         }
-
-        function downloadCSV() {
-            let csv = "Date,Name,Time,OT\n";
-            fullData.forEach(r => csv += `${r[0]},${r[1]},${r[2]},${r[3]}\n`);
-            let blob = new Blob([csv], { type: 'text/csv' });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            a.href = url; a.download = "Attendance_Record.csv"; a.click();
-        }
-
-        loadData();
     </script>
 </body>
 </html>
