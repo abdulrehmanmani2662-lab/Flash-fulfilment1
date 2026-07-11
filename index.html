@@ -7,97 +7,71 @@
     <style>
         body { background: #0c0c0c; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; }
         .container { max-width: 400px; margin: auto; background: #1a1a1a; padding: 20px; border-radius: 20px; }
-        h1 { color: #ff3333; font-size: 24px; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; }
-        .checkbox-container { display: flex; align-items: center; gap: 10px; color: #ffcc00; margin: 10px 0; font-size: 14px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #444; background: #222; color: #fff; }
         .btn { width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
         .save-btn { background: #ff3333; color: white; }
         .csv-btn { background: #008800; color: white; }
-        .total-box { background: #333; color: #ffcc00; padding: 15px; border-radius: 10px; margin: 20px 0; font-size: 18px; font-weight: bold; }
-        .table-container { background: #222; padding: 10px; border-radius: 15px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-        th, td { padding: 8px 2px; border-bottom: 1px solid #444; border-right: 1px solid #444; color: #fff; }
-        th:last-child, td:last-child { border-right: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+        th, td { padding: 8px 2px; border: 1px solid #444; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🕐 Attendance</h1>
-        <div id="userSetup"><input type="text" id="userName" placeholder="Apna Naam..."><button class="btn save-btn" onclick="setUser()">START APP</button></div>
+        <div id="userSetup"><input type="text" id="userName" placeholder="Apna Naam..."><button class="btn save-btn" onclick="setUser()">START</button></div>
         <div id="mainApp" style="display:none;">
-            <h2 id="welcomeText" style="font-size: 16px;"></h2>
+            <h2 id="userNameDisplay"></h2>
             <input type="time" id="time">
-            <div class="checkbox-container"><input type="checkbox" id="breakCheck" style="width:20px;">Break hui? (6:00 se OT)</div>
+            <label><input type="checkbox" id="breakCheck"> Break hui? (6 se OT)</label>
             <button id="actionBtn" class="btn save-btn" onclick="handleOT()">Save OT</button>
-            <button class="btn csv-btn" onclick="downloadMyCSV()">📥 Download CSV</button>
-            <div class="total-box" id="totalOT">Total OT: 0</div>
-            <div class="table-container"><table><thead><tr><th>Date</th><th>Time</th><th>OT</th></tr></thead><tbody id="tableBody"></tbody></table></div>
+            <button class="btn csv-btn" onclick="downloadCSV()">📥 CSV</button>
+            <h3 id="totalOT">Total OT: 0</h3>
+            <table><thead><tr><th>Date</th><th>Time</th><th>OT</th></tr></thead><tbody id="tableBody"></tbody></table>
         </div>
     </div>
 
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycbxdrsiAuL-nSTG_4-Pac9Aa5DcBZavzpEBwOYxXUzP6WjcpaV2C6hHNJQv9GSwLYcXD/exec";
-        let myData = [];
         let isEditing = false;
 
         function setUser() {
-            let name = document.getElementById("userName").value;
-            if(!name) return alert("Naam likho!");
-            localStorage.setItem("my_name", name);
+            localStorage.setItem("my_name", document.getElementById("userName").value);
             location.reload();
         }
 
         async function loadMyData() {
-            let res = await fetch(scriptURL + "?name=" + localStorage.getItem("my_name"));
-            myData = await res.json();
-            let tbody = document.getElementById("tableBody");
-            let total = 0, today = new Date().toISOString().split('T')[0];
-            
-            myData.forEach((row, i) => {
+            let res = await fetch(scriptURL + "?name=" + encodeURIComponent(localStorage.getItem("my_name")));
+            let data = await res.json();
+            let tbody = document.getElementById("tableBody"), total = 0, today = new Date().toISOString().split('T')[0];
+            tbody.innerHTML = "";
+            data.forEach((row, i) => {
                 if(i > 0) {
-                    let d = row[0].toString().split('T')[0];
-                    let t = row[2].toString().length > 5 ? row[2].toString().substring(11, 16) : row[2];
-                    tbody.innerHTML += `<tr><td>${d}</td><td>${t}</td><td>${row[3]}</td></tr>`;
+                    tbody.innerHTML += `<tr><td>${row[0]}</td><td>${row[2]}</td><td>${row[3]}</td></tr>`;
                     total += parseFloat(row[3]);
-                    if(d == today) {
-                        isEditing = true;
-                        document.getElementById("actionBtn").innerText = "Update Today's OT";
-                        document.getElementById("time").value = t;
-                    }
+                    if(row[0] == today) { isEditing = true; document.getElementById("actionBtn").innerText = "Update OT"; }
                 }
             });
-            document.getElementById("totalOT").innerText = "Total OT: " + total;
+            document.getElementById("totalOT").innerText = "Total OT: " + total.toFixed(1);
         }
 
         async function handleOT() {
-            let name = localStorage.getItem("my_name"), time = document.getElementById("time").value;
-            if(!time) return alert("Time select karo!");
+            let time = document.getElementById("time").value;
+            let [h, m] = time.split(':').map(Number);
+            let start = document.getElementById("breakCheck").checked ? 6 : 5.5;
+            let ot = Math.max(0, (h + m/60) - start).toFixed(1);
             
-            let startHour = document.getElementById("breakCheck").checked ? 6 : 5.5;
-            let hour = parseInt(time.split(":")[0]) + (parseInt(time.split(":")[1])/60);
-            let ot = hour > startHour ? (hour - startHour).toFixed(1) : 0;
-            
-            let action = isEditing ? "UPDATE" : "SAVE";
-            await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({action, date: new Date().toISOString().split('T')[0], name, time, ot}) });
-            alert("✅ Done!");
-            location.reload();
+            await fetch(scriptURL, { 
+                method: 'POST', mode: 'no-cors', 
+                body: JSON.stringify({action: isEditing ? "UPDATE" : "SAVE", date: new Date().toISOString().split('T')[0], name: localStorage.getItem("my_name"), time, ot}) 
+            });
+            alert("✅ Done!"); location.reload();
         }
 
-        let name = localStorage.getItem("my_name");
-        if(name) {
+        if(localStorage.getItem("my_name")) {
             document.getElementById("userSetup").style.display = "none";
             document.getElementById("mainApp").style.display = "block";
-            document.getElementById("welcomeText").innerText = "User: " + name;
+            document.getElementById("userNameDisplay").innerText = "User: " + localStorage.getItem("my_name");
             loadMyData();
-        }
-
-        function downloadMyCSV() {
-            let csv = "Date,Time,OT\n";
-            myData.forEach((r, i) => { if(i>0) csv += `${r[0]},${r[2]},${r[3]}\n`; });
-            let blob = new Blob([csv], { type: 'text/csv' });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement("a");
-            a.href = url; a.download = "Attendance.csv"; a.click();
         }
     </script>
 </body>
